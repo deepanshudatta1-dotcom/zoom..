@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zoom Clone — Live Video & Recording</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="toast" class="toast hidden">Copied!</div>
+
+  <!-- 1. LOBBY / PRE-JOIN SCREEN -->
+  <section id="lobby-screen" class="lobby-container">
+    <div class="lobby-card">
+      <div class="lobby-header">
+        <div class="brand-badge"><i class="fa-solid fa-video"></i></div>
+        <h1>Join Live Meeting</h1>
+        <p>Check your camera and microphone before entering</p>
+      </div>
+
+      <div class="preview-wrapper">
+        <video id="lobby-video" autoplay playsinline muted></video>
+        <div id="lobby-avatar" class="avatar-placeholder hidden">
+          <span id="lobby-avatar-initial">?</span>
+        </div>
+        <div class="preview-controls">
+          <button type="button" id="lobby-mic-btn" class="preview-btn active" title="Toggle Microphone">
+            <i class="fa-solid fa-microphone"></i>
+          </button>
+          <button type="button" id="lobby-cam-btn" class="preview-btn active" title="Toggle Camera">
+            <i class="fa-solid fa-video"></i>
+          </button>
+        </div>
+      </div>
+
+      <form id="join-form" class="lobby-form" novalidate>
+        <div class="input-group">
+          <label for="user-name">Your Name</label>
+          <input type="text" id="user-name" placeholder="e.g. Alex Morgan" maxlength="30" required />
+        </div>
+
+        <div class="input-group">
+          <label for="room-id">Room ID</label>
+          <div class="room-id-row">
+            <input type="text" id="room-id" placeholder="Enter or generate ID" maxlength="24" required />
+            <button type="button" id="generate-id-btn" class="btn-secondary">
+              <i class="fa-solid fa-shuffle"></i> Random
+            </button>
+          </div>
+        </div>
+
+        <p id="lobby-error" class="error-text hidden">Please enter both your name and a Room ID.</p>
+        <button type="submit" id="join-btn" class="btn-primary">Join Meeting</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- 2. MAIN MEETING ROOM SCREEN -->
+  <section id="meeting-screen" class="meeting-container hidden">
+    <div id="reactions-layer" class="reactions-layer"></div>
+
+    <!-- Live Recording Indicator Banner -->
+    <div id="rec-indicator" class="rec-indicator hidden">
+      <span class="rec-dot"></span> REC <span id="rec-timer">00:00</span>
+    </div>
+
+    <div class="meeting-workspace">
+      <main id="video-grid" class="video-grid"></main>
+
+      <!-- Collapsible Right Sidebar -->
+      <aside id="right-sidebar" class="right-sidebar collapsed">
+        <div class="sidebar-header">
+          <div class="sidebar-tabs">
+            <button type="button" id="tab-chat" class="sidebar-tab active">
+              <i class="fa-solid fa-message"></i> Chat
+            </button>
+            <button type="button" id="tab-participants" class="sidebar-tab">
+              <i class="fa-solid fa-users"></i> Participants (<span id="participant-count-header">1</span>)
+            </button>
+          </div>
+          <button type="button" id="close-sidebar-btn" class="icon-close-btn">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <!-- Chat Panel -->
+        <div id="panel-chat" class="sidebar-panel active">
+          <div id="chat-messages" class="chat-messages">
+            <div class="chat-system-msg">Messages are visible to everyone in the call.</div>
+          </div>
+          <form id="chat-form" class="chat-input-area">
+            <input type="text" id="chat-input" placeholder="Send a message..." autocomplete="off" />
+            <button type="submit" class="btn-send"><i class="fa-solid fa-paper-plane"></i></button>
+          </form>
+        </div>
+
+        <!-- Participants Panel -->
+        <div id="panel-participants" class="sidebar-panel hidden">
+          <ul id="participants-list" class="participants-list"></ul>
+        </div>
+      </aside>
+    </div>
+
+    <!-- Bottom Control Bar -->
+    <footer class="control-bar">
+      <div class="controls-left">
+        <div class="room-info-pill">
+          <span id="display-room-id" class="room-code">---</span>
+          <button type="button" id="copy-room-btn" class="copy-btn" title="Copy Shareable Invite Link">
+            <i class="fa-solid fa-link"></i> Copy Link
+          </button>
+        </div>
+        <span class="divider">|</span>
+        <span id="meeting-timer" class="meeting-timer">00:00</span>
+      </div>
+
+      <div class="controls-center">
+        <button type="button" id="btn-mic" class="control-btn">
+          <i class="fa-solid fa-microphone"></i><span>Mute</span>
+        </button>
+        <button type="button" id="btn-cam" class="control-btn">
+          <i class="fa-solid fa-video"></i><span>Stop Video</span>
+        </button>
+        <button type="button" id="btn-screen" class="control-btn">
+          <i class="fa-solid fa-display"></i><span>Share Screen</span>
+        </button>
+
+        <!-- Face & Audio Recording Button -->
+        <button type="button" id="btn-record" class="control-btn" title="Record Face & Audio">
+          <i class="fa-solid fa-record-vinyl"></i><span>Record</span>
+        </button>
+
+        <div class="reaction-wrapper">
+          <div id="reaction-picker" class="reaction-picker hidden">
+            <button type="button" class="emoji-btn" data-emoji="👍">👍</button>
+            <button type="button" class="emoji-btn" data-emoji="❤️">❤️</button>
+            <button type="button" class="emoji-btn" data-emoji="😂">😂</button>
+            <button type="button" class="emoji-btn" data-emoji="👏">👏</button>
+            <button type="button" class="emoji-btn" data-emoji="🎉">🎉</button>
+            <button type="button" class="emoji-btn" data-emoji="🔥">🔥</button>
+          </div>
+          <button type="button" id="btn-reactions" class="control-btn">
+            <i class="fa-regular fa-face-smile"></i><span>Reactions</span>
+          </button>
+        </div>
+
+        <button type="button" id="btn-participants" class="control-btn">
+          <div class="icon-badge-wrap">
+            <i class="fa-solid fa-users"></i>
+            <span id="participant-badge" class="count-pill">1</span>
+          </div>
+          <span>Participants</span>
+        </button>
+
+        <button type="button" id="btn-chat" class="control-btn">
+          <div class="icon-badge-wrap">
+            <i class="fa-solid fa-message"></i>
+            <span id="chat-unread-dot" class="unread-dot hidden"></span>
+          </div>
+          <span>Chat</span>
+        </button>
+      </div>
+
+      <div class="controls-right">
+        <button type="button" id="btn-leave" class="btn-leave">
+          <i class="fa-solid fa-phone-slash"></i><span>Leave</span>
+        </button>
+      </div>
+    </footer>
+  </section>
+
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
